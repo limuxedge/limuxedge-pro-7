@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAIL - Student Attendance and Information Logger</title>
+    <style>
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            box-sizing: border-box;
+            text-align: center;
+            background: rgb(255, 255, 255);
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 90%;
+            max-width: 900px;
+            margin: 5px;
+        }
+        .container h1 {
+            color: #ffffff;
+            width: 100%;
+            text-align: center;
+        }
+        .section {
+            background-color: #ffffff;
+            padding: 20px;
+            border: 1.5px solid #b2b2b2;
+            border-radius: 0.25em;
+            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.25);
+            margin: 10px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 45%;
+        }
+        #my-qr-reader {
+            padding: 0px !important;
+            border: 0px solid #b2b2b2 !important;
+            border-radius: 8px;
+            width: 100%;
+            height: 400px; /* Adjust this value to change the height */
+        }
+        .results-container {
+            height: 400px;
+            overflow-y: auto;
+            width: 100%;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        table, th, td {
+            border: 1px solid #b2b2b2;
+        }
+        th, td {
+            padding: 10px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        .export-button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            border: none;
+            background-color: #008000ad;
+            color: white;
+            cursor: pointer;
+            border-radius: 0.25em;
+        }
+        .export-button:hover {
+            background-color: #008000;
+        }
+        #export-section {
+            display: none;
+            background-color: #ffffff;
+            padding: 20px;
+            border: 1.5px solid #b2b2b2;
+            border-radius: 0.25em;
+            box-shadow: 0 20px 25px rgba(0, 0, 0, 0.25);
+            margin: 10px;
+            width: 90%;
+            max-width: 900px;
+        }
+        .login-container {
+            margin-top: 20px;
+            width: 100%;
+            max-width: 300px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .login-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 0.25em;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+        .login-button {
+            width: 100%;
+            padding: 10px;
+            background-color: #008000ad;
+            color: white;
+            border: none;
+            border-radius: 0.25em;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        .login-button:hover {
+            background-color: #008000;
+        }
+        .gender-input {
+            width: 100%;
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 0.25em;
+            box-sizing: border-box;
+            font-size: 16px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="section">
+            <div id="my-qr-reader"></div>
+        </div>
+        <div class="section results-container">
+            <h2>Scanned Attendance</h2>
+            <div class="results-wrapper">
+                <table id="result-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Time-In</th>
+                            <th>Time-Out</th>
+                            <th>Date</th>
+                            <th>Gender</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Scanned data will be appended here -->
+                    </tbody>
+                </table>
+            </div>
+            <button class="export-button" onclick="openExportSection()">Export</button>
+        </div>
+    </div>
+    <div id="export-section">
+        <div class="login-container">
+            <input type="password" id="admin-password" class="login-input" placeholder="Enter Admin Password">
+            <button class="login-button" onclick="validateAdmin()">Login</button>
+        </div>
+        <h1>Exported Attendance Data</h1>
+        <div>
+            <h2>Male Attendance</h2>
+            <table id="export-table-male">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Time-In</th>
+                        <th>Time-Out</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Male exported data will be appended here -->
+                </tbody>
+            </table>
+        </div>
+        <div>
+            <h2>Female Attendance</h2>
+            <table id="export-table-female">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Time-In</th>
+                        <th>Time-Out</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Female exported data will be appended here -->
+                </tbody>
+            </table>
+        </div>
+        <button class="export-button" onclick="sortTableByLastName()">Sort by Last Name</button>
+        <button class="export-button" onclick="downloadExcel()">Download Excel</button>
+    </div>
+    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.17.3/dist/xlsx.full.min.js"></script>
+    <script>
+     let scannedQRs = new Map();
+let scanEnabled = true;
+
+function saveDataToLocalStorage() {
+    const data = Array.from(scannedQRs.entries()).map(([name, info]) => ({ name, ...info }));
+    localStorage.setItem('scannedQRs', JSON.stringify(data));
+}
+
+function loadDataFromLocalStorage() {
+    const data = JSON.parse(localStorage.getItem('scannedQRs')) || [];
+    data.forEach(({ name, timeIn, timeOut, date, gender }) => {
+        const newRow = document.createElement("tr");
+        newRow.innerHTML = `
+            <td>${name}</td>
+            <td>${timeIn}</td>
+            <td>${timeOut}</td>
+            <td>${date}</td>
+            <td>${gender}</td>
+        `;
+        document.getElementById("result-table").getElementsByTagName("tbody")[0].appendChild(newRow);
+        scannedQRs.set(name, { timeIn, timeOut, date, gender, row: newRow });
+    });
+}
+
+function onScanSuccess(decodedText) {
+    if (!scanEnabled) return;
+
+    scanEnabled = false;
+    const now = new Date();
+    const time = now.toLocaleTimeString();
+    const date = now.toLocaleDateString();
+
+    // Split the decoded text by comma and semicolon
+    const [fullName, gender] = decodedText.split("; ");
+    const [lastName, firstName, middleInitial] = fullName.split(", ");
+
+    if (!fullName || !gender || !lastName || !firstName || !middleInitial) {
+        alert("Invalid QR code format. Please use the format 'LastName, FirstName, MiddleInitial; Gender'");
+        scanEnabled = true;
+        return;
+    }
+
+    const studentName = `${firstName} ${middleInitial}. ${lastName}`;
+    const studentGender = gender.trim().toUpperCase();
+
+    if (!scannedQRs.has(studentName)) {
+        scannedQRs.set(studentName, { timeIn: time, timeOut: "", date: date, gender: studentGender, row: null });
+
+        const tableBody = document.getElementById("result-table").getElementsByTagName("tbody")[0];
+        const newRow = tableBody.insertRow();
+
+        newRow.insertCell(0).textContent = studentName;
+        newRow.insertCell(1).textContent = time;
+        newRow.insertCell(2).textContent = "";
+        newRow.insertCell(3).textContent = date;
+        newRow.insertCell(4).textContent = studentGender;
+
+        scannedQRs.get(studentName).row = newRow;
+    } else {
+        const qrData = scannedQRs.get(studentName);
+        if (qrData.row) {
+            qrData.row.cells[2].textContent = time;
+            qrData.timeOut = time;
+        }
+        scannedQRs.delete(studentName);
+    }
+
+    saveDataToLocalStorage();
+    scanEnabled = true;
+}
+
+function getQrboxSize() {
+    const qrReaderContainer = document.getElementById("my-qr-reader");
+    const minDimension = Math.min(qrReaderContainer.clientWidth, qrReaderContainer.clientHeight);
+    const qrboxSize = Math.floor(minDimension * 0.5);
+    return qrboxSize;
+}
+
+function sortTableByLastName() {
+    const table = document.getElementById("result-table");
+    const rows = Array.from(table.rows).slice(1); // Skip the header row
+
+    rows.sort((a, b) => {
+        const aLastName = a.cells[0].textContent.split(" ").pop();
+        const bLastName = b.cells[0].textContent.split(" ").pop();
+        return aLastName.localeCompare(bLastName);
+    });
+
+    rows.forEach(row => table.appendChild(row)); // Reattach sorted rows
+}
+
+function openExportSection() {
+    const adminPassword = prompt("Enter admin password to proceed:");
+    if (adminPassword === "admin") { // Replace with actual password
+        document.getElementById("export-section").style.display = "block";
+        populateExportTables();
+    } else {
+        alert("Incorrect password. Please try again.");
+    }
+}
+
+function populateExportTables() {
+    const maleTableBody = document.getElementById("export-table-male").getElementsByTagName("tbody")[0];
+    const femaleTableBody = document.getElementById("export-table-female").getElementsByTagName("tbody")[0];
+
+    // Clear previous data
+    maleTableBody.innerHTML = "";
+    femaleTableBody.innerHTML = "";
+
+    // Populate tables with scanned data
+    scannedQRs.forEach((data, name) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+            <td>${name}</td>
+            <td>${data.timeIn}</td>
+            <td>${data.timeOut || ""}</td>
+            <td>${data.date}</td>
+        `;
+        if (data.gender.toLowerCase() === "male") {
+            maleTableBody.appendChild(row);
+        } else if (data.gender.toLowerCase() === "female") {
+            femaleTableBody.appendChild(row);
+        }
+    });
+}
+
+function downloadExcel() {
+    const wb = XLSX.utils.book_new();
+
+    // Separate male and female attendance
+    const maleData = [["Name", "Time-In", "Time-Out", "Date"]];
+    const femaleData = [["Name", "Time-In", "Time-Out", "Date"]];
+
+    scannedQRs.forEach((data, name) => {
+        const row = [name, data.timeIn, data.timeOut || "", data.date];
+
+        if (data.gender.toLowerCase() === "male") {
+            maleData.push(row);
+        } else if (data.gender.toLowerCase() === "female") {
+            femaleData.push(row);
+        }
+    });
+
+    const maleSheet = XLSX.utils.aoa_to_sheet(maleData);
+    XLSX.utils.book_append_sheet(wb, maleSheet, "Male Attendance");
+
+    const femaleSheet = XLSX.utils.aoa_to_sheet(femaleData);
+    XLSX.utils.book_append_sheet(wb, femaleSheet, "Female Attendance");
+
+    XLSX.writeFile(wb, "attendance.xlsx");
+
+    // Clear the scannedQRs map after exporting
+    scannedQRs.clear();
+
+    // Clear the result table in the main UI
+    const resultTableBody = document.getElementById("result-table").getElementsByTagName("tbody")[0];
+    resultTableBody.innerHTML = "";
+
+    // Clear the export tables
+    const maleTableBody = document.getElementById("export-table-male").getElementsByTagName("tbody")[0];
+    const femaleTableBody = document.getElementById("export-table-female").getElementsByTagName("tbody")[0];
+    
+    maleTableBody.innerHTML = "";
+    femaleTableBody.innerHTML = "";
+
+    // Clear the local storage to remove previous data
+    localStorage.removeItem("scannedQRs");
+
+    // Hide the export section
+    document.getElementById("export-section").style.display = "none";
+
+    alert("Records have been downloaded and cleared.");
+
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    loadDataFromLocalStorage();
+
+    let htmlScanner = new Html5QrcodeScanner(
+        "my-qr-reader",
+        { fps: 10, qrbox: getQrboxSize() }
+    );
+    htmlScanner.render(onScanSuccess);
+});
+    </script>
+</body>
+  </html>
+              
